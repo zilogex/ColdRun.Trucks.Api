@@ -37,7 +37,16 @@ namespace ColdRun.Trucks.Api.Controllers
             return Ok();
         }
 
+        [HttpDelete("Trucks/{truckId}/Remove")]
+        public async Task<ActionResult<string>> CreateTruck([FromRoute] string truckId)
+        {
+            var truck = await db.Trucks.FindAsync(truckId);
+            if (truck == null) return NotFound();
 
+            db.Trucks.Remove(truck);
+            await db.SaveChangesAsync();
+            return Ok(truck.TruckId);
+        }
 
         [HttpPatch("Trucks/Update")]
         public async Task<ActionResult<string>> UpdateTruck([FromBody] TruckDto truck)
@@ -45,7 +54,11 @@ namespace ColdRun.Trucks.Api.Controllers
             var entity = await db.Trucks.FindAsync(truck.TruckId);
             if (entity == null) return NotFound();
 
-
+            if (truck.Status.HasValue && truck.Status != TruckStatus.OutOfService)
+            {
+                if (truck.Status != (entity.Status == TruckStatus.Returning ? TruckStatus.Loading : entity.Status + 1))
+                    return BadRequest();
+            }
 
             entity.Name = truck.Name ?? entity.Name;
             entity.Description = truck.Description ?? entity.Description;
